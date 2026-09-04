@@ -35,7 +35,17 @@ jobs:
           PROJECT_DIR=$(dirname "$SETTINGS")
           PROPS="$PROJECT_DIR/gradle/wrapper/gradle-wrapper.properties"
 
+          if [ ! -f "$PROPS" ]; then
+            echo "ERROR: gradle-wrapper.properties not found"
+            exit 1
+          fi
+
           DIST_URL=$(grep '^distributionUrl=' "$PROPS" | cut -d= -f2- | sed 's/\\:/:/g')
+
+          if [ -z "$DIST_URL" ]; then
+            echo "ERROR: Gradle distribution URL not found"
+            exit 1
+          fi
 
           echo "Gradle distribution: $DIST_URL"
 
@@ -71,12 +81,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Private-Vault-APK
-          path: "project/**/build/outputs/apk/debug/*.apk"
-          if-no-files-found: error
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Private-Vault-APK
+          name: Private-Vault-APK-${{ github.run_number }}
           path: "project/**/build/outputs/apk/debug/*.apk"
           if-no-files-found: error
