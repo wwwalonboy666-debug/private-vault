@@ -35,22 +35,14 @@ jobs:
           PROJECT_DIR=$(dirname "$SETTINGS")
           PROPS="$PROJECT_DIR/gradle/wrapper/gradle-wrapper.properties"
 
-          if [ ! -f "$PROPS" ]; then
-            echo "ERROR: gradle-wrapper.properties not found"
-            exit 1
-          fi
-
           DIST_URL=$(grep '^distributionUrl=' "$PROPS" | cut -d= -f2- | sed 's/\\:/:/g')
-
-          if [ -z "$DIST_URL" ]; then
-            echo "ERROR: Gradle distribution URL not found"
-            exit 1
-          fi
 
           echo "Gradle distribution: $DIST_URL"
 
           mkdir -p "$HOME/gradle-dist"
+
           curl -fsSL "$DIST_URL" -o "$HOME/gradle.zip"
+
           unzip -q "$HOME/gradle.zip" -d "$HOME/gradle-dist"
 
           GRADLE_HOME=$(find "$HOME/gradle-dist" -mindepth 1 -maxdepth 1 -type d | head -n 1)
@@ -58,11 +50,30 @@ jobs:
           echo "$GRADLE_HOME/bin" >> "$GITHUB_PATH"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
+      - name: Create debug keystore
+        run: |
+          keytool -genkeypair \
+            -v \
+            -keystore "$PROJECT_DIR/debug.keystore" \
+            -storepass android \
+            -keypass android \
+            -alias androiddebugkey \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
       - name: Build APK
         run: |
           cd "$PROJECT_DIR"
           gradle assembleDebug --no-daemon --stacktrace
 
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Private-Vault-APK
+          path: "project/**/build/outputs/apk/debug/*.apk"
+          if-no-files-found: error
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
